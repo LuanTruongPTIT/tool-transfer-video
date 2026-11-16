@@ -1,0 +1,104 @@
+{
+  "name": "ecom-video-drop",
+  "version": "1.0.0",
+  "description": "Ecom Video Drop - Chuyển video AI từ Windows / macOS sang iPhone qua mạng Wi-Fi nội bộ",
+  "author": "Ecom Video Drop Team",
+  "private": true,
+  "main": "dist/main/index.js",
+  "scripts": {
+    "build:renderer": "vite build",
+    "build:main": "tsc -p tsconfig.main.json",
+    "build": "npm run build:renderer && npm run build:main",
+    "start": "npm run build && electron .",
+    "dev": "npm run build && electron .",
+    "test": "vitest run",
+    "package:win": "npm run build && electron-builder --win nsis portable --x64",
+    "package:win:zip-on-mac": "npm run build && electron-builder --win zip --x64 -c.win.signAndEditExecutable=false",
+    "package:mac": "npm run build && electron-builder --mac dmg zip"
+  },
+  "build": {
+    "appId": "com.ecomvideodrop.app",
+    "productName": "Ecom Video Drop",
+    "asar": true,
+    "files": [
+      "dist/**/*",
+      "build/icon.png",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "icon": "build/icon.ico",
+      "artifactName": "Ecom-Video-Drop-${version}-win-${arch}.${ext}",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Ecom Video Drop",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "artifactName": "Ecom-Video-Drop-Setup-${version}.exe"
+    },
+    "portable": {
+      "artifactName": "Ecom-Video-Drop-Portable-${version}.exe"
+    },
+    "mac": {
+      "icon": "build/icon.icns",
+      "category": "public.app-category.productivity",
+      "identity": null,
+      "artifactName": "Ecom-Video-Drop-${version}-mac-${arch}.${ext}",
+      "extendInfo": {
+        "NSLocalNetworkUsageDescription": "Ecom Video Drop sử dụng mạng Wi-Fi nội bộ để tìm và truyền video trực tiếp sang iPhone của bạn."
+      },
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "dmg": {
+      "title": "Cài đặt Ecom Video Drop",
+      "icon": "build/icon.icns"
+    }
+  },
+  "dependencies": {
+    "chokidar": "^4.0.3",
+    "lucide-react": "^0.475.0",
+    "mediabunny": "^1.65.2",
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.1",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "electron": "^34.3.0",
+    "electron-builder": "^25.1.8",
+    "postcss": "^8.5.1",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.3",
+    "vite": "^6.1.0",
+    "vitest": "^3.0.5"
+  }
+}

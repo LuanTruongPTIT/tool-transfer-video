@@ -1,0 +1,117 @@
+name: Build & Publish Desktop Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Phiên bản phát hành trên GitHub Releases (ví dụ: v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Đóng gói Windows (.exe Installer & Portable)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout mã nguồn
+        uses: actions/checkout@v4
+
+      - name: Cài đặt Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Cài đặt thư viện
+        run: npm ci
+
+      - name: Build ứng dụng & Chạy kiểm thử tự động
+        run: |
+          npm run build
+          npm test
+
+      - name: Đóng gói bộ cài đặt Windows (NSIS Setup + Portable có gắn Icon)
+        run: npx electron-builder --win nsis portable --x64 --publish never
+
+      - name: Tải lên gói cài đặt Windows
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installers
+          path: |
+            release/Ecom-Video-Drop-Setup-*.exe
+            release/Ecom-Video-Drop-Portable-*.exe
+          if-no-files-found: error
+
+  build-macos:
+    name: Đóng gói macOS (.dmg Apple Silicon & Intel)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout mã nguồn
+        uses: actions/checkout@v4
+
+      - name: Cài đặt Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Cài đặt thư viện
+        run: npm ci
+
+      - name: Build ứng dụng
+        run: npm run build
+
+      - name: Đóng gói bộ cài đặt macOS (.dmg cho M1/M2/M3/M4 & Intel)
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npx electron-builder --mac dmg zip --arm64 --x64 --publish never
+
+      - name: Tải lên gói cài đặt macOS
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-installers
+          path: |
+            release/Ecom-Video-Drop-*-mac-*.dmg
+            release/Ecom-Video-Drop-*-mac-*.zip
+          if-no-files-found: error
+
+  publish-release:
+    name: Xuất bản lên GitHub Releases
+    needs: [build-windows, build-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tải toàn bộ file cài đặt về
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Tạo trang tải về trên GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || inputs.tag_name || 'v1.0.0' }}
+          name: Ecom Video Drop ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || inputs.tag_name || 'v1.0.0' }}
+          draft: false
+          prerelease: false
+          files: release-assets/*
+          body: |
+            ## Tải về Ecom Video Drop cho máy tính
+
+            Ứng dụng chuyển video AI (**OpenArt**, **Google Flow**, **OBS**) trực tiếp sang **Ảnh (Photos)** trên iPhone qua mạng Wi-Fi nội bộ.
+
+            ### 1. Dành cho Windows 10 / 11 (64-bit)
+            - **Khuyên dùng:** Tải **`Ecom-Video-Drop-Setup-*.exe`** — bấm đúp để cài đặt và tự động tạo biểu tượng **Ecom Video Drop** ngoài màn hình **Desktop** + **Start Menu** (không cần quyền Admin).
+            - **Bản chạy ngay không cần cài:** Tải **`Ecom-Video-Drop-Portable-*.exe`**.
+            - *Lưu ý lần đầu mở trên Windows:* Nếu hiện bảng xanh *Windows protected your PC*, bấm **More info (Thêm thông tin)** → chọn **Run anyway (Vẫn chạy)**.
+
+            ### 2. Dành cho macOS
+            - **Máy Mac chip Apple M1 / M2 / M3 / M4:** Tải **`Ecom-Video-Drop-*-mac-arm64.dmg`** → mở lên và kéo biểu tượng vào thư mục `Applications`.
+            - **Máy Mac chip Intel:** Tải **`Ecom-Video-Drop-*-mac-x64.dmg`**.
+            - *Lưu ý lần đầu mở trên macOS:* Giữ phím `Control` + Click chuột phải vào ứng dụng trong `Applications` → chọn **Open (Mở)** (hoặc chạy `xattr -cr "/Applications/Ecom Video Drop.app"` trong Terminal nếu macOS báo kiểm tra nhà phát triển).
